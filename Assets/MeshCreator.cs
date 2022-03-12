@@ -38,6 +38,9 @@ namespace DefaultNamespace
 
         [SerializeField] private int cornerCount = 4;
 
+        private int initialTris, initialVertexCount;
+        private int newPositionCounter = 0;
+
         private void Start()
         {
             //TODO:Polygon Base
@@ -51,6 +54,15 @@ namespace DefaultNamespace
             }
 
             vertices.Clear();
+            ContinuousVertexInit();
+            Mesh mesh = new Mesh();
+            mesh.vertices = vertices.ToArray();
+            mesh.triangles = tris.ToArray();
+            _meshFilter.sharedMesh = mesh;
+        }
+
+        void ContinuousVertexInit()
+        {
             for (int i = 0; i < CalculatedVertices.Count; i++)
             {
                 vertices.Add(CalculatedVertices[i] + Vector3.back);
@@ -79,6 +91,7 @@ namespace DefaultNamespace
             tris.Add(cornerCount);
             tris.Add(0);
 
+            initialTris = tris.Count;
             string log = "";
             for (int i = 0; i <= tris.Count - 3; i += 3)
             {
@@ -86,22 +99,97 @@ namespace DefaultNamespace
             }
 
             Debug.Log(log);
-            Mesh mesh = new Mesh();
-            mesh.vertices = vertices.ToArray();
-            mesh.triangles = tris.ToArray();
-            _meshFilter.sharedMesh = mesh;
+        }
+
+        void DiscreteVertexInit()
+        {
+            List<Vector3> tempStartVertices = new List<Vector3>();
+            for (int i = 0; i < CalculatedVertices.Count; i++)
+            {
+                tempStartVertices.Add(CalculatedVertices[i] + Vector3.back);
+            }
+
+            for (int i = 0; i < CalculatedVertices.Count; i++)
+            {
+                tempStartVertices.Add(CalculatedVertices[i] + Vector3.forward);
+            }
+
+            tris.Clear();
+            for (int i = 0; i < cornerCount - 1; i++)
+            {
+                tris.Add(i);
+                tris.Add(i + cornerCount);
+                tris.Add(i + cornerCount + 1);
+                tris.Add(i);
+                tris.Add(i + cornerCount + 1);
+                tris.Add(i + 1);
+            }
+
+            tris.Add(cornerCount - 1);
+            tris.Add(cornerCount - 1 + cornerCount);
+            tris.Add(cornerCount);
+            tris.Add(cornerCount - 1);
+            tris.Add(cornerCount);
+            tris.Add(0);
+
+            for (int i = 0; i < tris.Count; i++)
+            {
+                vertices.Add(tempStartVertices[tris[i]]);
+            }
+
+            tris.Clear();
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                tris.Add(i);
+            }
+
+            initialTris = tris.Count;
+            initialVertexCount = vertices.Count;
         }
 
 
-        private int newPositionCounter = 0;
-
         public void OnNewPositionAdded(List<Vector3> obj)
         {
-            //TODO:optimization 
-            /*
+            ContinuousOnNewPositionAdded(obj);
+            var tempMesh = _meshFilter.mesh;
+            tempMesh.vertices = vertices.ToArray();
+            tempMesh.triangles = tris.ToArray();
+            tempMesh.RecalculateNormals();
+            tempMesh.RecalculateBounds();
+            _meshFilter.sharedMesh = tempMesh;
+            newPositionCounter++;
+        }
+
+        public void OnLastVerticesUpdate(List<Vector3> updatedPos)
+        {
+            _meshFilter.sharedMesh = ContinuousOnLastVerticesUpdated(updatedPos);
+        }
+
+        void ContinuousOnNewPositionAdded(List<Vector3> obj)
+        {
+            var startCount = vertices.Count;
+
+            for (int i = obj.Count; i > 0; i--)
+            {
+                vertices.Add(vertices[startCount - i]);
+            }
+
+            foreach (var p in obj)
+            {
+                vertices.Add(p);
+            }
+
+            var currentTris = tris.Count;
+
+            for (int i = currentTris - (6 * cornerCount); i < currentTris; i++)
+            {
+                tris.Add(tris[i] + cornerCount + cornerCount);
+            }
+
+
             if (newPositionCounter >= 15)
             {
-                for (int i = 0; i < obj.Count; i++)
+                for (int i = 0; i < obj.Count * 2; i++)
                 {
                     vertices.RemoveAt(0);
                 }
@@ -110,29 +198,23 @@ namespace DefaultNamespace
                 {
                     tris.RemoveAt(0);
                 }
-            }
-*/
-            foreach (var p in obj)
-            {
-                vertices.Add(p);
-            }
 
-            var currentTris = tris.Count;
-            for (int i = tris.Count - (6 * cornerCount); i < currentTris; i++)
-            {
-                tris.Add(tris[i] + cornerCount);
+                for (int i = 0; i < tris.Count; i++)
+                {
+                    tris[i] -= cornerCount * 2;
+                }
+
+                string log = "";
+                for (int i = 0; i <= tris.Count - 3; i += 3)
+                {
+                    log += tris[i] + "," + tris[i + 1] + "," + tris[i + 2] + "\n";
+                }
+
+                Debug.Log(log);
             }
-
-
-            Debug.Log(tris.Count);
-            var tempMesh = _meshFilter.mesh;
-            tempMesh.vertices = vertices.ToArray();
-            tempMesh.triangles = tris.ToArray();
-            _meshFilter.sharedMesh = tempMesh;
-            newPositionCounter++;
         }
 
-        public void OnLastVerticesUpdate(List<Vector3> updatedPos)
+        Mesh ContinuousOnLastVerticesUpdated(List<Vector3> updatedPos)
         {
             var tempMesh = _meshFilter.mesh;
             for (int i = 0; i < updatedPos.Count; i++)
@@ -141,7 +223,69 @@ namespace DefaultNamespace
             }
 
             tempMesh.vertices = vertices.ToArray();
-            _meshFilter.sharedMesh = tempMesh;
+            tempMesh.RecalculateBounds();
+            tempMesh.RecalculateNormals();
+            return tempMesh;
+        }
+
+        void DiscreteOnNewPositionAdded(List<Vector3> obj)
+        {
+            List<int> tempTris = new List<int>();
+
+            List<Vector3> newVertices = new List<Vector3>();
+            for (int i = 0; i < CalculatedVertices.Count; i++)
+            {
+                newVertices.Add(CalculatedVertices[i] + Vector3.back);
+            }
+
+            for (int i = 0; i < CalculatedVertices.Count; i++)
+            {
+                newVertices.Add(CalculatedVertices[i] + Vector3.forward);
+            }
+
+            for (int i = 0; i < cornerCount - 1; i++)
+            {
+                tempTris.Add(i);
+                tempTris.Add(i + cornerCount);
+                tempTris.Add(i + cornerCount + 1);
+                tempTris.Add(i);
+                tempTris.Add(i + cornerCount + 1);
+                tempTris.Add(i + 1);
+            }
+
+            tempTris.Add(cornerCount - 1);
+            tempTris.Add(cornerCount - 1 + cornerCount);
+            tempTris.Add(cornerCount);
+            tempTris.Add(cornerCount - 1);
+            tempTris.Add(cornerCount);
+            tempTris.Add(0);
+
+
+            for (int i = 0; i < tempTris.Count; i++)
+            {
+                vertices.Add(newVertices[tempTris[i]]);
+            }
+
+            for (int i = 0; i < tempTris.Count; i++)
+            {
+                tris.Add(tempTris[i] + vertices.Count - initialTris);
+            }
+        }
+
+        Mesh DiscreteOnLastVerticesUpdated(List<Vector3> updatedPos)
+        {
+            var tempMesh = _meshFilter.mesh;
+
+            var startIndex = vertices.Count - initialVertexCount;
+            for (int i = 0; i < startIndex; i++)
+            {
+                vertices[^(updatedPos.Count - i)] = updatedPos[i];
+            }
+
+            tempMesh.vertices = vertices.ToArray();
+            tempMesh.RecalculateBounds();
+            tempMesh.RecalculateNormals();
+            return tempMesh;
         }
     }
 }

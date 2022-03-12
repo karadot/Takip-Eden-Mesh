@@ -232,7 +232,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 1
+  m_RenderPostProcessing: 0
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -564,7 +564,7 @@ MonoBehaviour:
   _meshFilter: {fileID: 1800158650}
   _mover: {fileID: 1418773448}
   CalculatedVertices: []
-  cornerCount: 4
+  cornerCount: 18
 --- !u!1 &2133566000
 GameObject:
   m_ObjectHideFlags: 0

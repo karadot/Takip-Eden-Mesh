@@ -21,6 +21,8 @@ public class Mover : MonoBehaviour
     private IEnumerator Start()
     {
         yield return null;
+        yield return null;
+        yield return null;
         _corners = _creator.CalculatedVertices;
         StartCoroutine(UpdatePositions());
     }
@@ -33,15 +35,16 @@ public class Mover : MonoBehaviour
             var positions = new List<Vector3>();
             for (int i = 0; i < _corners.Count; i++)
             {
-                positions.Add(transform.position + transform.TransformVector(_corners[i]));
+                positions.Add(transform.TransformPoint(_corners[i]));
             }
 
-            if (_timer <= .15f)
+            if (_timer < .1f)
             {
                 _creator.OnLastVerticesUpdate(positions);
             }
             else
             {
+                Debug.Log("add new positions");
                 _creator.OnNewPositionAdded(positions);
                 _timer = 0;
             }
