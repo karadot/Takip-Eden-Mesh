@@ -24,15 +24,23 @@ public class Mover : MonoBehaviour
         yield return null;
         yield return null;
         _corners = _creator.CalculatedVertices;
+        for (int i = 0; i < _corners.Count; i++)
+        {
+            var temp = _corners[i];
+            temp.z = 0;
+            _corners[i] = temp;
+        }
+
         StartCoroutine(UpdatePositions());
     }
 
     IEnumerator UpdatePositions()
     {
         _timer = 0;
+        var positions = new List<Vector3>();
         while (true)
         {
-            var positions = new List<Vector3>();
+            positions.Clear();
             for (int i = 0; i < _corners.Count; i++)
             {
                 positions.Add(transform.TransformPoint(_corners[i]));
@@ -44,7 +52,6 @@ public class Mover : MonoBehaviour
             }
             else
             {
-                Debug.Log("add new positions");
                 _creator.OnNewPositionAdded(positions);
                 _timer = 0;
             }
